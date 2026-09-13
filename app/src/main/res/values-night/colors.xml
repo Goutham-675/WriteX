@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark-mode ink & paper: primary lifts to a pale indigo -->
+    <color name="colorPrimary">#B6C0FF</color>
+    <color name="colorOnPrimary">#111A46</color>
+    <color name="colorPrimaryContainer">#2C3565</color>
+    <color name="colorOnPrimaryContainer">#D9DEFB</color>
+
+    <color name="colorSecondary">#D6C7A8</color>
+    <color name="colorOnSecondary">#2A2414</color>
+    <color name="colorSecondaryContainer">#433D2B</color>
+    <color name="colorOnSecondaryContainer">#EAE0C9</color>
+
+    <color name="colorTertiary">#F2B4AB</color>
+    <color name="colorOnTertiary">#4A1815</color>
+    <color name="colorTertiaryContainer">#56302B</color>
+    <color name="colorOnTertiaryContainer">#F8DBD6</color>
+
+    <color name="colorError">#F2B8B5</color>
+    <color name="colorOnError">#601410</color>
+    <color name="colorErrorContainer">#8C1D18</color>
+    <color name="colorOnErrorContainer">#F9DEDC</color>
+
+    <color name="colorBackground">#11100F</color>
+    <color name="colorOnBackground">#E8E3D9</color>
+    <color name="colorSurface">#11100F</color>
+    <color name="colorOnSurface">#E8E3D9</color>
+    <color name="colorSurfaceVariant">#49453E</color>
+    <color name="colorOnSurfaceVariant">#CBC4BA</color>
+    <color name="colorOutline">#938C81</color>
+    <color name="colorOutlineVariant">#49453E</color>
+    <color name="colorSurfaceContainerLowest">#0C0B0A</color>
+    <color name="colorSurfaceContainerLow">#191815</color>
+    <color name="colorSurfaceContainer">#1D1C19</color>
+    <color name="colorSurfaceContainerHigh">#272622</color>
+    <color name="colorSurfaceContainerHighest">#32302C</color>
+
+    <color name="ink">#B6C0FF</color>
+    <color name="paper">#E8E3D9</color>
+</resources>

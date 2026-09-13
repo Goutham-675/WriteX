@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Handwriting Rater</string>
+    <string name="tries_left">Tries left today: %1$d</string>
+    <string name="take_photo">Rate my handwriting</string>
+    <string name="pick_gallery">Gallery</string>
+    <string name="watch_ad">Watch ad</string>
+    <string name="light_hint">Tip: even light, hold the phone straight over the page.</string>
+    <string name="tier_font">Font Incarnate</string>
+    <string name="tier_calligrapher">Calligrapher</string>
+    <string name="tier_neat">Textbook Neat</string>
+    <string name="tier_scribbler">Chaotic Scribbler</string>
+    <string name="tier_doctor">Doctor\'s Prescription</string>
+    <string name="share">Share</string>
+    <string name="share_text">I scored %1$d/100 (%2$s) on Handwriting Rater!</string>
+    <string name="rate_another">Rate another</string>
+    <string name="details">Details</string>
+    <string name="out_of_100">/100</string>
+    <string name="debug_overlay">Debug segmentation overlay</string>
+</resources>

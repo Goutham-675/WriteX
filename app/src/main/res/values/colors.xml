@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary: deep ink navy -->
+    <color name="colorPrimary">#1C2541</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorPrimaryContainer">#D9DEFB</color>
+    <color name="colorOnPrimaryContainer">#0A1230</color>
+
+    <!-- Secondary: warm bronze -->
+    <color name="colorSecondary">#5C5341</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+    <color name="colorSecondaryContainer">#EAE0C9</color>
+    <color name="colorOnSecondaryContainer">#171105</color>
+
+    <!-- Tertiary: oxblood -->
+    <color name="colorTertiary">#6E3B34</color>
+    <color name="colorOnTertiary">#FFFFFF</color>
+    <color name="colorTertiaryContainer">#F8DBD6</color>
+    <color name="colorOnTertiaryContainer">#2B0B0A</color>
+
+    <!-- Error (Material default) -->
+    <color name="colorError">#B3261E</color>
+    <color name="colorOnError">#FFFFFF</color>
+    <color name="colorErrorContainer">#F9DEDC</color>
+    <color name="colorOnErrorContainer">#410E0B</color>
+
+    <!-- Paper surfaces -->
+    <color name="colorBackground">#F7F3EC</color>
+    <color name="colorOnBackground">#211D16</color>
+    <color name="colorSurface">#F7F3EC</color>
+    <color name="colorOnSurface">#211D16</color>
+    <color name="colorSurfaceVariant">#E6E0D6</color>
+    <color name="colorOnSurfaceVariant">#49453E</color>
+    <color name="colorOutline">#7B766C</color>
+    <color name="colorOutlineVariant">#CAC4B9</color>
+    <color name="colorSurfaceContainerLowest">#FFFFFF</color>
+    <color name="colorSurfaceContainerLow">#F1ECE3</color>
+    <color name="colorSurfaceContainer">#EBE7DE</color>
+    <color name="colorSurfaceContainerHigh">#E5E1D9</color>
+    <color name="colorSurfaceContainerHighest">#DFDBD3</color>
+
+    <!-- Brand tokens -->
+    <color name="ink">#1C2541</color>
+    <color name="paper">#F7F3EC</color>
+</resources>
