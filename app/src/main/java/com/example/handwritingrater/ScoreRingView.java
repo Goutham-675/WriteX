@@ -16,6 +16,7 @@ public class ScoreRingView extends View {
 
     private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint arc = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint glow = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF bounds = new RectF();
     private float progress = 0f;
     private ValueAnimator animator;
@@ -34,12 +35,16 @@ public class ScoreRingView extends View {
         track.setStrokeCap(Paint.Cap.ROUND);
         arc.setStyle(Paint.Style.STROKE);
         arc.setStrokeCap(Paint.Cap.ROUND);
+        glow.setStyle(Paint.Style.STROKE);
+        glow.setStrokeCap(Paint.Cap.ROUND);
         int trackColor = MaterialColors.getColor(this,
-                com.google.android.material.R.attr.colorSurfaceContainerHighest, 0xFFDFDBD3);
+                com.google.android.material.R.attr.colorSurfaceContainerHighest, 0xFF262C50);
         int arcColor = MaterialColors.getColor(this,
-                com.google.android.material.R.attr.colorPrimary, 0xFF1C2541);
+                com.google.android.material.R.attr.colorPrimary, 0xFFB7A6FF);
         track.setColor(trackColor);
         arc.setColor(arcColor);
+        glow.setColor(arcColor);
+        glow.setAlpha(60);
     }
 
     public void setProgress(float p, boolean animate) {
@@ -75,7 +80,10 @@ public class ScoreRingView extends View {
         arc.setStrokeWidth(stroke);
         canvas.drawOval(bounds, track);
         if (progress > 0) {
-            canvas.drawArc(bounds, -90, 360f * progress, false, arc);
+            float sweep = 360f * Math.max(0.02f, progress);
+            glow.setStrokeWidth(stroke * 1.9f);
+            canvas.drawArc(bounds, -90, sweep, false, glow);
+            canvas.drawArc(bounds, -90, sweep, false, arc);
         }
     }
 }

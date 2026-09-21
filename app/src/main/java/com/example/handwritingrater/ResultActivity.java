@@ -4,9 +4,14 @@ import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.view.View;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import java.io.File;
 import java.util.Locale;
@@ -16,6 +21,7 @@ public class ResultActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_result);
+        applySystemBarInsets(findViewById(android.R.id.content));
 
         int score = getIntent().getIntExtra("score", 0);
         String tier = getIntent().getStringExtra("tier");
@@ -25,7 +31,8 @@ public class ResultActivity extends AppCompatActivity {
         int stroke = getIntent().getIntExtra("stroke", 0);
         int size = getIntent().getIntExtra("size", 0);
 
-        ((ScoreRingView) findViewById(R.id.scoreRing)).setProgress(score / 100f, true);
+        ScoreRingView ring = findViewById(R.id.scoreRing);
+        ring.setProgress(0f, false);
         ((TextView) findViewById(R.id.scoreText)).setText(String.valueOf(score));
         TextView tierText = findViewById(R.id.tierText);
         tierText.setText(tier == null ? "" : tier);
@@ -71,6 +78,50 @@ public class ResultActivity extends AppCompatActivity {
             i.putExtra(Intent.EXTRA_TEXT, getString(R.string.share_text, score, tier));
             startActivity(Intent.createChooser(i, getString(R.string.share)));
         });
+
+        revealScore(ring, score);
+    }
+
+    private void revealScore(ScoreRingView ring, int score) {
+        View overlay = findViewById(R.id.analyzingOverlay);
+        View pill = findViewById(R.id.analyzingText);
+        pill.animate()
+                .alpha(0.5f)
+                .setDuration(500)
+                .setInterpolator(new LinearInterpolator())
+                .setStartDelay(250)
+                .withEndAction(() -> pill.animate().alpha(1f)
+                        .setDuration(500)
+                        .setInterpolator(new LinearInterpolator())
+                        .start());
+        overlay.postDelayed(() -> {
+            pill.animate().cancel();
+            overlay.animate()
+                    .alpha(0f)
+                    .setDuration(450)
+                    .withEndAction(() -> {
+                        overlay.setVisibility(View.GONE);
+                        ring.setScaleX(0.85f);
+                        ring.setScaleY(0.85f);
+                        ring.animate()
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(550)
+                                .setInterpolator(new OvershootInterpolator())
+                                .start();
+                        ring.setProgress(score / 100f, true);
+                    })
+                    .start();
+        }, 1400);
+    }
+
+    private void applySystemBarInsets(final View root) {
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
+        ViewCompat.requestApplyInsets(root);
     }
 
     private void setBar(String rowId, String barId, String name, int value) {

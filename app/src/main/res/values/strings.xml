@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Handwriting Rater</string>
+    <string name="app_name">WriteX</string>
+    <string name="tagline">Snap. Scan. Score.</string>
+    <string name="analyzing">Analyzing your handwriting…</string>
+    <string name="toggle_theme">Toggle light/dark theme</string>
     <string name="tries_left">Tries left today: %1$d</string>
     <string name="take_photo">Rate my handwriting</string>
     <string name="pick_gallery">Gallery</string>

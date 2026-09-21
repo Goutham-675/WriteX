@@ -2,18 +2,23 @@ package com.example.handwritingrater;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
@@ -22,6 +27,9 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.io.File;
 import java.io.InputStream;
@@ -34,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageCapture imageCapture;
     private TryManager tries;
     private AdManager ads;
+    private SharedPreferences prefs;
     private final Executor bg = Executors.newSingleThreadExecutor();
 
     private final ActivityResultLauncher<Intent> gallery =
@@ -46,8 +55,13 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        prefs = getSharedPreferences("ui", MODE_PRIVATE);
+        boolean dark = prefs.getBoolean("dark", false);
+        AppCompatDelegate.setDefaultNightMode(dark ? AppCompatDelegate.MODE_NIGHT_YES
+                : AppCompatDelegate.MODE_NIGHT_NO);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        applySystemBarInsets(findViewById(android.R.id.content));
         previewView = findViewById(R.id.preview);
         triesText = findViewById(R.id.triesText);
         tries = new TryManager(this);
@@ -57,6 +71,15 @@ public class MainActivity extends AppCompatActivity {
         Button capture = findViewById(R.id.captureBtn);
         Button galleryBtn = findViewById(R.id.galleryBtn);
         Button adBtn = findViewById(R.id.adBtn);
+        ImageButton themeToggle = findViewById(R.id.themeToggle);
+        themeToggle.setImageResource(isDark() ? R.drawable.ic_moon : R.drawable.ic_sun);
+        themeToggle.setOnClickListener(v -> {
+            boolean nowDark = !isDark();
+            prefs.edit().putBoolean("dark", nowDark).apply();
+            AppCompatDelegate.setDefaultNightMode(nowDark ? AppCompatDelegate.MODE_NIGHT_YES
+                    : AppCompatDelegate.MODE_NIGHT_NO);
+            recreate();
+        });
 
         capture.setOnClickListener(v -> takePhoto());
         galleryBtn.setOnClickListener(v -> gallery.launch(
@@ -84,8 +107,22 @@ public class MainActivity extends AppCompatActivity {
         else Toast.makeText(this, "Camera denied — gallery still works", Toast.LENGTH_LONG).show();
     }
 
-    private void refresh() {
+    private boolean isDark() {
+    return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+            == Configuration.UI_MODE_NIGHT_YES;
+}
+
+private void refresh() {
         triesText.setText(getString(R.string.tries_left, tries.left()));
+    }
+
+    private void applySystemBarInsets(final View root) {
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
+        ViewCompat.requestApplyInsets(root);
     }
 
     private void startCamera() {
