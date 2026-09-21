@@ -30,6 +30,12 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.io.File;
 import java.io.InputStream;
@@ -39,10 +45,13 @@ import java.util.concurrent.Executors;
 public class MainActivity extends AppCompatActivity {
     private PreviewView previewView;
     private TextView triesText;
+    private TextView accountText;
+    private com.google.android.material.button.MaterialButton googleBtn;
     private ImageCapture imageCapture;
     private TryManager tries;
     private AdManager ads;
     private SharedPreferences prefs;
+    private GoogleSignInClient googleSignInClient;
     private final Executor bg = Executors.newSingleThreadExecutor();
 
     private final ActivityResultLauncher<Intent> gallery =
@@ -50,6 +59,17 @@ public class MainActivity extends AppCompatActivity {
                 if (r.getResultCode() == RESULT_OK && r.getData() != null) {
                     Uri uri = r.getData().getData();
                     if (uri != null) scoreUri(uri);
+                }
+            });
+
+    private final ActivityResultLauncher<Intent> signIn =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), r -> {
+                Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(r.getData());
+                try {
+                    GoogleSignInAccount acct = task.getResult(ApiException.class);
+                    onSignedIn(acct);
+                } catch (ApiException e) {
+                    Toast.makeText(MainActivity.this, R.string.sign_in_failed, Toast.LENGTH_SHORT).show();
                 }
             });
 
@@ -64,9 +84,21 @@ public class MainActivity extends AppCompatActivity {
         applySystemBarInsets(findViewById(android.R.id.content));
         previewView = findViewById(R.id.preview);
         triesText = findViewById(R.id.triesText);
+        accountText = findViewById(R.id.accountText);
+        googleBtn = findViewById(R.id.googleBtn);
         tries = new TryManager(this);
         ads = new AdManager();
         ads.init(this);
+
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .requestProfile()
+                .build();
+        googleSignInClient = GoogleSignIn.getClient(this, gso);
+        googleBtn.setOnClickListener(v -> {
+            if (tries.isPremium()) signOut();
+            else signIn.launch(googleSignInClient.getSignInIntent());
+        });
 
         Button capture = findViewById(R.id.captureBtn);
         Button galleryBtn = findViewById(R.id.galleryBtn);
@@ -98,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
             startCamera();
         }
         refresh();
+        updateAuthUi();
     }
 
     @Override
@@ -114,6 +147,42 @@ public class MainActivity extends AppCompatActivity {
 
 private void refresh() {
         triesText.setText(getString(R.string.tries_left, tries.left()));
+    }
+
+    private void onSignedIn(GoogleSignInAccount acct) {
+        tries.setPremium(true);
+        refresh();
+        updateAuthUi();
+        String name = (acct.getDisplayName() != null && !acct.getDisplayName().isEmpty())
+                ? acct.getDisplayName() : acct.getEmail();
+        Toast.makeText(this, getString(R.string.sign_in_welcome, name, tries.max()),
+                Toast.LENGTH_LONG).show();
+    }
+
+    private void signOut() {
+        googleSignInClient.signOut().addOnCompleteListener(t -> {
+            tries.setPremium(false);
+            refresh();
+            updateAuthUi();
+        });
+    }
+
+    private void updateAuthUi() {
+        boolean signedIn = tries.isPremium();
+        googleBtn.setText(signedIn ? R.string.sign_out : R.string.sign_in);
+        if (signedIn) {
+            String name = null;
+            GoogleSignInAccount acct = GoogleSignIn.getLastSignedInAccount(this);
+            if (acct != null) {
+                name = (acct.getDisplayName() != null && !acct.getDisplayName().isEmpty())
+                        ? acct.getDisplayName() : acct.getEmail();
+            }
+            accountText.setText(name != null
+                    ? getString(R.string.account_signed_in, name)
+                    : getString(R.string.tries_left, tries.max()));
+        } else {
+            accountText.setText(R.string.account_signed_out);
+        }
     }
 
     private void applySystemBarInsets(final View root) {
@@ -219,6 +288,15 @@ private void refresh() {
     private void scoreBitmap(Bitmap bmp) {
         boolean dbg = BuildConfig.DEBUG;
         HandwritingScorer.Result r = HandwritingScorer.score(bmp, dbg);
+        if (dbg) {
+            // Determinism guard: identical bitmap must always yield the same
+            // score. This never fires; it's a cheap net in case a future edit
+            // introduces randomness or order-dependent accumulation.
+            HandwritingScorer.Result r2 = HandwritingScorer.score(bmp, false);
+            if (r2.score != r.score) {
+                android.util.Log.w("WriteX", "Non-deterministic score: " + r.score + " vs " + r2.score);
+            }
+        }
         bmp.recycle();
         String overlayPath = null;
         if (dbg && r.overlay != null) {
@@ -247,6 +325,11 @@ private void refresh() {
             i.putExtra("spacing", r.spacing);
             i.putExtra("stroke", r.stroke);
             i.putExtra("size", r.size);
+            i.putExtra("slantStd", r.slantStd);
+            i.putExtra("baseNorm", r.baseNorm);
+            i.putExtra("spacingCv", r.spacingCv);
+            i.putExtra("strokeCv", r.strokeCv);
+            i.putExtra("sizeCv", r.sizeCv);
             i.putExtra("lines", r.lines);
             i.putExtra("comps", r.comps);
             i.putExtra("skew", r.skew);

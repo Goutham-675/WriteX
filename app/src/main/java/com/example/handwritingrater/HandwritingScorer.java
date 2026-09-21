@@ -44,12 +44,18 @@ public final class HandwritingScorer {
     private static final float WT_STROKE = 0.18f;
     private static final float WT_SIZE = 0.18f;
 
-    // ---- metric curve constants (spread scores across all tiers) ----
-    private static final double K_BASELINE = 220.0;   // scaled by rmse fraction of letter height
-    private static final double K_SPACING = 70.0;
-    private static final double K_SLANT = 1.7;
-    private static final double K_STROKE = 60.0;
-    private static final double K_SIZE = 90.0;
+    // ---- metric curve constants (logistic, centered at T where metric = 50) ----
+    // metric = FLOOR + (100-FLOOR) / (1 + (raw/T)^2). The floor and generous
+    // centers make the scoring lenient: everyday handwriting lands in the
+    // 60s-70s instead of collapsing near 40, while genuinely messy pages still
+    // sink below the chaotic band. Fully deterministic.
+    private static final double T_SLANT = 16.0;      // std of PCA lean (degrees)
+    private static final double T_BASELINE = 0.14;   // baseline rmse / letter height
+    private static final double T_SPACING = 0.55;    // CV of letter gaps
+    private static final double T_STROKE = 0.50;     // CV of stroke width
+    private static final double T_SIZE = 0.55;       // CV of letter heights
+    private static final double CURVE_FLOOR = 30.0;  // worst a metric can score
+    private static final double STRETCH = 1.20;
 
     // ---- robust-stat clipping bounds ----
     private static final double CLIP_LO = 0.4;
@@ -72,12 +78,14 @@ public final class HandwritingScorer {
         public final int score;
         public final String tier;
         public final int slant, baseline, spacing, stroke, size;
+        public final double slantStd, baseNorm, spacingCv, strokeCv, sizeCv;
         public final int lines, comps;
         public final double skew;
         public final boolean printed;
         public final Bitmap overlay; // debug builds only, may be null
 
         Result(int score, String tier, int slant, int baseline, int spacing, int stroke, int size,
+               double slantStd, double baseNorm, double spacingCv, double strokeCv, double sizeCv,
                int lines, int comps, double skew, boolean printed, Bitmap overlay) {
             this.score = score;
             this.tier = tier;
@@ -86,6 +94,11 @@ public final class HandwritingScorer {
             this.spacing = spacing;
             this.stroke = stroke;
             this.size = size;
+            this.slantStd = slantStd;
+            this.baseNorm = baseNorm;
+            this.spacingCv = spacingCv;
+            this.strokeCv = strokeCv;
+            this.sizeCv = sizeCv;
             this.lines = lines;
             this.comps = comps;
             this.skew = skew;
@@ -154,7 +167,7 @@ public final class HandwritingScorer {
         int[] label = new int[n];
         List<Comp> comps = components(ink, gray, w, h, label);
         if (comps.size() < 4) {
-            return new Result(0, tierOf(0), 0, 0, 0, 0, 0, 0, comps.size(), 0, false, null);
+            return new Result(0, tierOf(0), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, comps.size(), 0, false, null);
         }
 
         List<Line> lines = lines(comps);
@@ -168,14 +181,15 @@ public final class HandwritingScorer {
         double pitch = pitchCv(lines);
         double skew = skewDegrees(lines);
 
-        int slant = slantStd < 0 ? 70 : clamp(100 - slantStd * K_SLANT);
-        int baseline = baseNorm < 0 ? 70 : clamp(100 - baseNorm * K_BASELINE);
-        int spacing = spacingCv < 0 ? 70 : clamp(100 - spacingCv * K_SPACING);
-        int stroke = strokeCv < 0 ? 70 : clamp(100 - strokeCv * K_STROKE);
-        int size = sizeCv < 0 ? 70 : clamp(100 - sizeCv * K_SIZE);
+        int slant = slantStd < 0 ? 70 : metricCurve(slantStd, T_SLANT);
+        int baseline = baseNorm < 0 ? 70 : metricCurve(baseNorm, T_BASELINE);
+        int spacing = spacingCv < 0 ? 70 : metricCurve(spacingCv, T_SPACING);
+        int stroke = strokeCv < 0 ? 70 : metricCurve(strokeCv, T_STROKE);
+        int size = sizeCv < 0 ? 70 : metricCurve(sizeCv, T_SIZE);
 
-        int score = Math.round(slant * WT_SLANT + baseline * WT_BASELINE + spacing * WT_SPACING
+        int rawScore = Math.round(slant * WT_SLANT + baseline * WT_BASELINE + spacing * WT_SPACING
                 + stroke * WT_STROKE + size * WT_SIZE);
+        int score = stretch(rawScore);
 
         // Printed detection: voting across 5 machine-text signals, with a hard
         // gate on baseline straightness (the strongest single discriminator
@@ -196,16 +210,156 @@ public final class HandwritingScorer {
 
         Bitmap overlay = withOverlay ? mkOverlay(gray, ink, label, lines, w, h) : null;
         return new Result(score, tierOf(score), slant, baseline, spacing, stroke, size,
+                slantStd, baseNorm, spacingCv, strokeCv, sizeCv,
                 lines.size(), comps.size(), skew, printed, overlay);
     }
 
+    /**
+     * One unique tier name per score (0-100). Table keyed by score/10 (band)
+     * and score%10, so every exact score has its own label and the same page
+     * always resurfaces with the same name. Each band is ordered worst -> best.
+     */
     public static String tierOf(int s) {
-        if (s >= 90) return "Font Incarnate";
-        if (s >= 75) return "Calligrapher";
-        if (s >= 60) return "Textbook Neat";
-        if (s >= 40) return "Chaotic Scribbler";
-        return "Doctor's Prescription";
+        if (s < 0) s = 0;
+        if (s > 100) s = 100;
+        if (s == 100) return "Font Incarnate";
+        return TIER_NAMES[s / 10][s % 10];
     }
+
+    private static final String[][] TIER_NAMES = {
+            { // 0-9
+                    "Garbled Scrawl",
+                    "Blotted Scratch",
+                    "Illegible Scrawl",
+                    "Scattered Scribble",
+                    "Scratchwork",
+                    "Torn Decipher",
+                    "Broken Script",
+                    "Crumpled Scrawl",
+                    "Smudged Writing",
+                    "Doctor's Prescription"
+            },
+            { // 10-19
+                    "Severe Scramble",
+                    "Ragged Scratch",
+                    "Mangled Scrawl",
+                    "Torn Handwriting",
+                    "Shaky Scrawl",
+                    "Wavering Script",
+                    "Rough Scrawl",
+                    "Drifting Scrawl",
+                    "Undisciplined Hand",
+                    "Doctor's Scrawl"
+            },
+            { // 20-29
+                    "Turbulent Script",
+                    "Roughened Scrawl",
+                    "Slapdash Hand",
+                    "Careless Scrawl",
+                    "Loosened Hand",
+                    "Run-on Scribble",
+                    "Loose Scribble",
+                    "Sloppy Scrawl",
+                    "Scattered Hand",
+                    "Rambling Scrawl"
+            },
+            { // 30-39
+                    "Wild Scribble",
+                    "Speedy Scrawl",
+                    "Hurried Scrawl",
+                    "Rushed Scribble",
+                    "Untidy Scrawl",
+                    "Cluttered Hand",
+                    "Messy Scribble",
+                    "Unkempt Scrawl",
+                    "Trifling Hand",
+                    "Scribbler's Special"
+            },
+            { // 40-49
+                    "Wrecked Writing",
+                    "Frantic Scribble",
+                    "Chaotic Frenzy",
+                    "Scrambled Scribble",
+                    "Tangled Scribble",
+                    "Wandering Scribble",
+                    "Untamed Scribble",
+                    "Carefree Scribble",
+                    "Loose Scribble",
+                    "Playful Scribble"
+            },
+            { // 50-59
+                    "Chaotic Scribbler",
+                    "Wobbly Scrawl",
+                    "Loping Scrawl",
+                    "Swaying Scrawl",
+                    "Wandering Hand",
+                    "Informal Scrawl",
+                    "Relaxed Scrawl",
+                    "Comfortable Scrawl",
+                    "Easy Scrawl",
+                    "Natural Scrawl"
+            },
+            { // 60-69
+                    "Eager Neatness",
+                    "Everyday Neat",
+                    "Casually Neat",
+                    "Pleasant Hand",
+                    "Mellow Hand",
+                    "Steady Scribble",
+                    "Neat-ish Hand",
+                    "Legible Hand",
+                    "Readable Hand",
+                    "Workable Script"
+            },
+            { // 70-79
+                    "Studied Hand",
+                    "Pleased Clarity",
+                    "Even Spacing",
+                    "Orderly Hand",
+                    "Polished Hand",
+                    "Sharp-ish Script",
+                    "Tidy Script",
+                    "Brisk Neatness",
+                    "Firm Script",
+                    "Textbook Neat"
+            },
+            { // 80-89
+                    "Shining Script",
+                    "Confident Script",
+                    "Graceful Hand",
+                    "Stylish Flair",
+                    "Crisp Calligraphy",
+                    "Fluid Script",
+                    "Elegant Script",
+                    "Refined Calligraphy",
+                    "Sleek Hand",
+                    "Calligrapher"
+            },
+            { // 90-99
+                    "Breathtaking Script",
+                    "Gallery Script",
+                    "Immaculate Calligraphy",
+                    "Perfect Pitch",
+                    "Museum Piece",
+                    "Calligrapher's Masterpiece",
+                    "Font's Whisper",
+                    "Living Typeface",
+                    "Letterpress Soul",
+                    "Font Incarnate"
+            },
+            { // 100
+                    "Font Incarnate",
+                    "Font Incarnate",
+                    "Font Incarnate",
+                    "Font Incarnate",
+                    "Font Incarnate",
+                    "Font Incarnate",
+                    "Font Incarnate",
+                    "Font Incarnate",
+                    "Font Incarnate",
+                    "Font Incarnate"
+            }
+    };
 
     // ---- Bradley adaptive threshold: ink = gray <= localMean * RATIO ----
     private static boolean[] adaptiveInk(int[] gray, int w, int h) {
@@ -661,5 +815,18 @@ public final class HandwritingScorer {
         if (v < 0) return 0;
         if (v > 100) return 100;
         return (int) Math.round(v);
+    }
+
+    // Smooth logistic so similar pages separate on the steep part of the
+    // curve, with a lenient floor so everyday writing never tanks. Deterministic:
+    // same raw value always maps to the same metric.
+    private static int metricCurve(double raw, double t) {
+        double v = raw / t;
+        return clamp(CURVE_FLOOR + (100.0 - CURVE_FLOOR) / (1.0 + v * v));
+    }
+
+    // Widen the combined score around the midpoint (moderate stretch).
+    private static int stretch(int s) {
+        return clamp(50.0 + (s - 50.0) * STRETCH);
     }
 }

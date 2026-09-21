@@ -82,6 +82,33 @@
                 android:textSize="12sp"
                 app:icon="@drawable/ic_ads"
                 app:iconSize="14dp" />
+
+            <TextView
+                android:id="@+id/accountText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="8dp"
+                android:maxWidth="200dp"
+                android:text="@string/account_signed_out"
+                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="visible" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/googleBtn"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="32dp"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:text="@string/sign_in"
+                android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
 

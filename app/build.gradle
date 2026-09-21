@@ -2,6 +2,11 @@ plugins {
     id("com.android.application")
 }
 
+// Firebase is enabled only once google-services.json is present.
+if (rootProject.file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
+
 android {
     namespace = "com.example.handwritingrater"
     // 37 = preinstalled platform (avoids downloading another SDK platform)
@@ -47,4 +52,6 @@ dependencies {
     implementation("androidx.camera:camera-view:1.4.2")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
     implementation("com.google.android.gms:play-services-ads:23.0.0")
+    implementation("com.google.android.gms:play-services-auth:21.6.0")
+    implementation("com.google.firebase:firebase-auth:24.2.0")
 }
