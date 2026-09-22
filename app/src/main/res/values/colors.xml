@@ -53,4 +53,5 @@
     <color name="ink">#5A5A5A</color>
     <color name="paper">#FFFFFF</color>
     <color name="glow">#4A4A4A</color>
+    <color name="launcherBackground">#2B2B2B</color>
 </resources>

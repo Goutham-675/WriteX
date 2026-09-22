@@ -11,8 +11,7 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
 
 /** AdMob RewardedAd wrapper. Grants one extra try on completion. */
 public final class AdManager {
-    // Google test unit ID — replace with real ID only at release.
-    private static final String TEST_UNIT_ID = "ca-app-pub-3940256099942544/5224354917";
+    private static final String UNIT_ID = BuildConfig.REWARDED_AD_UNIT_ID;
 
     private RewardedAd ad;
 
@@ -27,7 +26,7 @@ public final class AdManager {
     }
 
     public void load(Activity activity) {
-        RewardedAd.load(activity, TEST_UNIT_ID, new AdRequest.Builder().build(),
+        RewardedAd.load(activity, UNIT_ID, new AdRequest.Builder().build(),
                 new RewardedAdLoadCallback() {
                     @Override
                     public void onAdLoaded(@NonNull RewardedAd a) { ad = a; }

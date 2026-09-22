@@ -9,3 +9,7 @@ local.properties
 .cxx
 google-services.json
 service-account-key.json
+ad.properties
+signing.properties
+*.keystore
+*.jks

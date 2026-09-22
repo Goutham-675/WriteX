@@ -154,14 +154,27 @@ public final class HandwritingScorer {
 
     public static Result score(Bitmap bitmap, boolean withOverlay) {
         Bitmap bmp = downscale(bitmap);
-        int w = bmp.getWidth(), h = bmp.getHeight(), n = w * h;
-
-        int[] gray = new int[n];
+        int w = bmp.getWidth(), h = bmp.getHeight();
+        int[] gray = new int[w * h];
         bmp.getPixels(gray, 0, w, 0, 0, w, h);
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < gray.length; i++) {
             int c = gray[i];
             gray[i] = (((c >> 16) & 0xff) * 38 + ((c >> 8) & 0xff) * 75 + (c & 0xff) * 15) >> 7;
         }
+        return scoreGrayImpl(gray, w, h, withOverlay);
+    }
+
+    /**
+     * Pure scoring pipeline over a grayscale array (0 = dark/ink, 255 = paper).
+     * Has zero Android dependencies, so synthetic images can drive it under plain
+     * JVM unit tests. Identical results to {@link #score(Bitmap)}.
+     */
+    public static Result scoreGray(int[] gray, int w, int h) {
+        return scoreGrayImpl(gray, w, h, false);
+    }
+
+    private static Result scoreGrayImpl(int[] gray, int w, int h, boolean withOverlay) {
+        int n = w * h;
 
         boolean[] ink = adaptiveInk(gray, w, h);
         int[] label = new int[n];
