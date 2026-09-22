@@ -59,7 +59,8 @@ public class HandwritingScorerTest {
 
     @Test
     public void tierNamesCoverTheRange() {
-        assertEquals("Doctor's Prescription", HandwritingScorer.tierOf(0));
+        assertEquals("Garbled Scrawl", HandwritingScorer.tierOf(0));
+        assertEquals("Doctor's Prescription", HandwritingScorer.tierOf(9));
         assertEquals("Font Incarnate", HandwritingScorer.tierOf(100));
         assertTrue(HandwritingScorer.tierOf(50).length() > 0);
     }
